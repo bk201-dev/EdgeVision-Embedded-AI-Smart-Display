@@ -1,29 +1,24 @@
 # AI Model
 
-This directory contains the computer-vision model used by **EdgeVision**.
+The vision component of EdgeVision is based on a custom convolutional neural network trained to classify cropped face images into the two visual categories used by the prototype.
 
-The model is a custom convolutional neural network trained to classify cropped face images into the two labels used by the original training dataset:
-
-- `man`
-- `woman`
-
-> The output represents the model's visual classification based on its training data. It should not be interpreted as determining a person's actual gender identity.
+The classifier is only one part of the complete system: its output is later used by the embedded application to select the content displayed to the user.
 
 ---
 
-## Model Pipeline
+## Pipeline
 
 ```text
-Input Image
-    ↓
+Camera Frame
+      ↓
 Face Detection
-    ↓
+      ↓
 Face Crop
-    ↓
+      ↓
 Resize to 96 × 96
-    ↓
-Normalize / 255
-    ↓
-CNN
-    ↓
+      ↓
+Normalization
+      ↓
+Custom CNN
+      ↓
 Class + Confidence
