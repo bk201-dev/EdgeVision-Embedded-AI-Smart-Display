@@ -63,17 +63,17 @@ Original Image
       ↓
 Face Detection
       ↓
-Face Bounding Box
+ Face Bounding Box
       ↓
-Face Crop
+   Face Crop
       ↓
-Resize
-96 × 96
+   Resize
+   96 × 96
       ↓
-Normalize
-pixel / 255
+  Normalize
+  pixel / 255
       ↓
-CNN
+     CNN
 ```
 
 The same preprocessing principle is used during local and server-side inference.
