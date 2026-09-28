@@ -1,25 +1,29 @@
 # AI Model
 
-This folder contains the training and inference side of EdgeVision Ads.
+This directory contains the computer-vision model used by **EdgeVision**.
 
-## Expected contents
+The model is a custom convolutional neural network trained to classify cropped face images into the two labels used by the original training dataset:
 
-- `train.py` — training entry point
-- `infer.py` — local inference entry point
-- `config.example.json` — example configuration
-- exported model file — add only if its size is reasonable
+- `man`
+- `woman`
 
-## Document before publishing
+> The output represents the model's visual classification based on its training data. It should not be interpreted as determining a person's actual gender identity.
 
-1. Dataset source
-2. Training labels
-3. Train / validation / test split
-4. Input image size
-5. Model architecture
-6. Preprocessing
-7. Metrics
-8. Confidence threshold
-9. Known failure cases
-10. Export format used by the embedded / edge target
+---
 
-Do not describe the classifier as determining a person's definitive gender. Describe the model according to the labels and data it was actually trained on.
+## Model Pipeline
+
+```text
+Input Image
+    ↓
+Face Detection
+    ↓
+Face Crop
+    ↓
+Resize to 96 × 96
+    ↓
+Normalize / 255
+    ↓
+CNN
+    ↓
+Class + Confidence
