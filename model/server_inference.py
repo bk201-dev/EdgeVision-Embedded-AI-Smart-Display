@@ -1,76 +1,387 @@
-# server.py
 from flask import Flask, request, jsonify
+from tensorflow.keras.models import load_model
+from tensorflow.keras.preprocessing.image import img_to_array
+
 import numpy as np
 import cv2
-import tensorflow as tf
+import cvlib as cv
 import os
 import logging
 
-logging.basicConfig(level=logging.INFO)
+
+# ============================================================
+# Logging
+# ============================================================
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="[%(levelname)s] %(message)s"
+)
+
+
+# ============================================================
+# Flask application
+# ============================================================
 
 app = Flask(__name__)
 
-# Charge le modèle (même nom que celui que tu utilises localement)
-MODEL_PATH = "gender_detection.model"  # ou "model.h5" si tu as .h5
-if not os.path.exists(MODEL_PATH):
-    logging.error(f"Model not found at {MODEL_PATH}. Place server.py in the same folder as the model.")
-else:
-    model = tf.keras.models.load_model(MODEL_PATH)
-    logging.info(f"Model loaded from {MODEL_PATH}")
+# Maximum accepted request size.
+# Useful to avoid receiving unexpectedly large images.
+app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024  # 5 MB
 
-# Classe(s) attendue(s)
-labels = ["man", "woman"]
+
+# ============================================================
+# Configuration
+# ============================================================
+
+MODEL_PATH = os.getenv(
+    "EDGEVISION_MODEL_PATH",
+    "gender_detection.model"
+)
+
+LABELS = [
+    "man",
+    "woman"
+]
+
+SERVER_HOST = os.getenv(
+    "EDGEVISION_HOST",
+    "127.0.0.1"
+)
+
+
+SERVER_PORT = int(
+    os.getenv(
+        "EDGEVISION_PORT",
+        "5000"
+    )
+)
+
+
+# ============================================================
+# Load AI model
+# ============================================================
+
+if not os.path.exists(MODEL_PATH):
+    raise FileNotFoundError(
+        f"Model not found: {MODEL_PATH}\n"
+        "Place the trained model in this directory or set "
+        "the EDGEVISION_MODEL_PATH environment variable."
+    )
+
+
+logging.info("Loading AI model...")
+
+model = load_model(MODEL_PATH)
+
+logging.info("Model loaded successfully.")
+
+
+# ============================================================
+# Image preprocessing
+# ============================================================
 
 def preprocess_jpg_bytes(jpg_bytes):
-    # Convert raw JPEG bytes (request.data) -> BGR image -> crop/resize -> normalized array
-    nparr = np.frombuffer(jpg_bytes, np.uint8)
-    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-    if img is None:
+    """
+    Convert raw JPEG bytes into the same input format used
+    by the local webcam inference pipeline.
+
+    Pipeline:
+
+    JPEG
+      -> OpenCV BGR image
+      -> Face detection
+      -> Largest face selection
+      -> Face crop
+      -> Resize to 96x96
+      -> Normalize to [0, 1]
+      -> Add batch dimension
+    """
+
+    # --------------------------------------------------------
+    # JPEG bytes -> NumPy buffer
+    # --------------------------------------------------------
+
+    nparr = np.frombuffer(
+        jpg_bytes,
+        np.uint8
+    )
+
+
+    # --------------------------------------------------------
+    # Decode JPEG using OpenCV
+    # --------------------------------------------------------
+
+    frame = cv2.imdecode(
+        nparr,
+        cv2.IMREAD_COLOR
+    )
+
+    if frame is None:
         return None
-    # Optionnel : détecter visage et recadrer (ici on assume image contient face ou on crop centre)
-    # Pour simplicité : redimensionner tout en 96x96 (comme ton model)
-    h, w = img.shape[:2]
-    # Si tu veux centrer un crop carré:
-    side = min(h, w)
-    cx, cy = w // 2, h // 2
-    x1 = max(0, cx - side//2)
-    y1 = max(0, cy - side//2)
-    crop = img[y1:y1+side, x1:x1+side]
-    face = cv2.resize(crop, (96, 96))
-    face = face.astype("float32") / 255.0
-    face = np.expand_dims(face, axis=0)  # shape (1,96,96,3)
-    return face
+
+
+    # --------------------------------------------------------
+    # Detect faces
+    # --------------------------------------------------------
+
+    faces, confidences = cv.detect_face(frame)
+
+    if len(faces) == 0:
+        return None
+
+    largest_face = None
+    largest_area = 0
+
+    for face in faces:
+
+        startX, startY = face[0], face[1]
+        endX, endY = face[2], face[3]
+
+        width = endX - startX
+        height = endY - startY
+
+        area = width * height
+
+        if area > largest_area:
+            largest_area = area
+            largest_face = face
+
+
+    if largest_face is None:
+        return None
+
+
+    startX, startY = largest_face[0], largest_face[1]
+    endX, endY = largest_face[2], largest_face[3]
+
+
+    # --------------------------------------------------------
+    # Keep coordinates inside image boundaries
+    # --------------------------------------------------------
+
+    height, width = frame.shape[:2]
+
+    startX = max(0, startX)
+    startY = max(0, startY)
+
+    endX = min(width, endX)
+    endY = min(height, endY)
+
+
+    # --------------------------------------------------------
+    # Crop detected face
+    # --------------------------------------------------------
+
+    face_crop = np.copy(
+        frame[startY:endY, startX:endX]
+    )
+
+    if (
+        face_crop.shape[0] < 10
+        or face_crop.shape[1] < 10
+    ):
+        return None
+
+
+    # --------------------------------------------------------
+    # Resize to model input resolution
+    # --------------------------------------------------------
+
+    face_crop = cv2.resize(
+        face_crop,
+        (96, 96)
+    )
+
+
+    # --------------------------------------------------------
+    # Normalize pixel values
+    # --------------------------------------------------------
+
+    face_crop = face_crop.astype(
+        "float32"
+    ) / 255.0
+
+
+    # --------------------------------------------------------
+    # Convert to Keras image array
+    # --------------------------------------------------------
+
+    face_crop = img_to_array(
+        face_crop
+    )
+
+
+    # --------------------------------------------------------
+    # Add batch dimension
+    # --------------------------------------------------------
+
+    face_crop = np.expand_dims(
+        face_crop,
+        axis=0
+    )
+
+
+    return face_crop
+
+
+# ============================================================
+# Health endpoint
+# ============================================================
+
+@app.route("/", methods=["GET"])
+def home():
+
+    return jsonify({
+        "status": "EdgeVision AI server running"
+    })
+
+
+# ============================================================
+# Prediction endpoint
+# ============================================================
 
 @app.route("/predict", methods=["POST"])
 def predict():
+
     try:
-        # ESP32 envoie raw JPEG bytes avec Content-Type: image/jpeg -> on lit request.data
-        jpg = request.data
-        if not jpg:
-            return jsonify({"error": "no image received"}), 400
 
-        x = preprocess_jpg_bytes(jpg)
-        if x is None:
-            return jsonify({"error": "could not decode image"}), 400
+        # ----------------------------------------------------
+        # Read raw JPEG bytes sent by the embedded camera
+        # ----------------------------------------------------
 
-        preds = model.predict(x)  # shape (1,2) or (1,) depending du modèle
-        # gère cas sortie float32 ou quantized
-        if preds.ndim == 2 and preds.shape[1] >= 2:
-            p = preds[0]
-            idx = int(np.argmax(p))
-            prob = float(p[idx])
+        jpg_bytes = request.data
+
+
+        if not jpg_bytes:
+
+            return jsonify({
+                "error": "no image received"
+            }), 400
+
+
+        # ----------------------------------------------------
+        # Preprocess image
+        # ----------------------------------------------------
+
+        input_tensor = preprocess_jpg_bytes(
+            jpg_bytes
+        )
+
+
+        if input_tensor is None:
+
+            return jsonify({
+                "error": "no valid face detected or image could not be decoded"
+            }), 422
+
+
+        # ----------------------------------------------------
+        # Run CNN inference
+        # ----------------------------------------------------
+
+        predictions = model.predict(
+            input_tensor,
+            verbose=0
+        )
+
+
+        # ----------------------------------------------------
+        # Handle two output classifier
+        # ----------------------------------------------------
+
+        if (
+            predictions.ndim == 2
+            and predictions.shape[1] >= 2
+        ):
+
+            scores = predictions[0]
+
+            class_index = int(
+                np.argmax(scores)
+            )
+
+            confidence = float(
+                scores[class_index]
+            )
+
+
+        # ----------------------------------------------------
+        # Fallback for a one  output sigmoid model
+        # ----------------------------------------------------
+
         else:
-            # si le modèle renvoie une seule probabilité (ex: sigmoid)
-            val = float(preds[0][0]) if preds.ndim == 2 else float(preds[0])
-            idx = 0 if val < 0.5 else 1
-            prob = val if idx == 1 else 1.0 - val
 
-        label = labels[idx]
-        return jsonify({"label": label, "prob": prob})
-    except Exception as e:
-        logging.exception("Prediction error")
-        return jsonify({"error": str(e)}), 500
+            value = float(
+                predictions[0][0]
+                if predictions.ndim == 2
+                else predictions[0]
+            )
+
+            class_index = (
+                1 if value >= 0.5 else 0
+            )
+
+            confidence = (
+                value
+                if class_index == 1
+                else 1.0 - value
+            )
+
+
+        label = LABELS[class_index]
+
+
+        logging.info(
+            "Prediction: %s (%.2f%%)",
+            label,
+            confidence * 100
+        )
+
+
+        # ----------------------------------------------------
+        # JSON response
+        # ----------------------------------------------------
+
+        return jsonify({
+
+            "label": label,
+
+            "confidence": confidence,
+
+            "confidence_percent": round(
+                confidence * 100,
+                2
+            )
+
+        })
+
+
+    except Exception as error:
+
+        logging.exception(
+            "Prediction error"
+        )
+
+        return jsonify({
+            "error": "prediction failed"
+        }), 500
+
+
+# ============================================================
+# Start server
+# ============================================================
 
 if __name__ == "__main__":
-    # Host 0.0.0.0 pour être accessible depuis l'ESP (même réseau)
-    app.run(host="0.0.0.0", port=5000)
+
+    logging.info(
+        "Starting EdgeVision server on %s:%s",
+        SERVER_HOST,
+        SERVER_PORT
+    )
+
+    app.run(
+        host=SERVER_HOST,
+        port=SERVER_PORT,
+        debug=False
+    )
