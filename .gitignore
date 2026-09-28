@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+.env
+.ipynb_checkpoints/
+
+# Model / training outputs
+runs/
+checkpoints/
+outputs/
+logs/
+*.ckpt
+*.h5
+*.keras
+*.onnx
+*.pt
+*.pth
+*.tflite
+
+# Dataset
+data/raw/
+data/processed/
+data/cache/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Embedded build output
+build/
+Debug/
+Release/
+*.elf
+*.hex
+*.bin
+*.map
+*.o
+*.d
+
+# Temporary
+*.tmp
+*.bak
+~*

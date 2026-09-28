@@ -1,0 +1,13 @@
+{
+  "input_size": [
+    224,
+    224
+  ],
+  "classes": [
+    "class_0",
+    "class_1"
+  ],
+  "confidence_threshold": 0.7,
+  "model_path": "path/to/model",
+  "camera_index": 0
+}
