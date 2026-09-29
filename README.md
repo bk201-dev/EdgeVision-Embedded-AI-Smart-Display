@@ -11,10 +11,6 @@
 </p>
 
 
-### Embedded AI Smart Display
-
-**Computer Vision • TensorFlow • Flask • ESP32-CAM • Smart Display**
-
 EdgeVision is an embedded-AI prototype that connects real-time visual classification to a physical display system.
 
 The project combines a custom CNN, face detection, an HTTP inference server, and a proposed ESP32-CAM + TFT architecture to dynamically select displayed content.
