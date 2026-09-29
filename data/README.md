@@ -53,11 +53,11 @@ The split uses a fixed random seed for reproducibility.
 
 Training images are augmented dynamically using:
 
-- rotation,
-- horizontal and vertical shifts,
-- shear,
-- zoom,
-- horizontal flipping.
+- rotation
+- horizontal and vertical shifts
+- shear
+- zoom
+- horizontal flipping
 
 This increases image variability without duplicating files on disk.
 
