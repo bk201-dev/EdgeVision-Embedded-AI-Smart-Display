@@ -21,8 +21,11 @@ logs/
 *.pt
 *.pth
 *.tflite
+*.model
+*.weights.h5
 
 # Dataset
+data/gender_dataset_face/
 data/raw/
 data/processed/
 data/cache/
