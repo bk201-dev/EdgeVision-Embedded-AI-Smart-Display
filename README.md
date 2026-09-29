@@ -1,260 +1,225 @@
-# EdgeVision Ads
+# EdgeVision
 
 ### Embedded AI Smart Display
 
-**Camera • Edge AI • Audience Classification • Embedded Control • Dynamic Content Display**
+**Computer Vision • TensorFlow • Flask • ESP32-CAM • Smart Display**
 
-EdgeVision Ads is an embedded AI prototype that uses a camera-based classifier to select display content dynamically.
+EdgeVision is an embedded-AI prototype that connects real-time visual classification to a physical display system.
 
-The project is designed as an end-to-end system rather than only an AI notebook: image acquisition, inference, decision logic, embedded control, and display output are treated as parts of one complete product.
-
-> **Important:** the visual classifier should be described using the labels it was actually trained on. It does not determine a person's identity or definitive gender. Classification results can be wrong, and the system should not be used for consequential decisions.
+The project combines a custom CNN, face detection, an HTTP inference server, and a proposed ESP32-CAM + TFT architecture to dynamically select displayed content.
 
 ---
 
-## System Architecture
+## How It Works
 
 ```mermaid
 flowchart LR
-    CAM["Camera"] --> PRE["Image Pre-processing"]
-    PRE --> AI["AI Classifier"]
-    AI --> LOGIC["Content Selection Logic"]
-    LOGIC --> MCU["Embedded Controller"]
-    MCU --> DISP["Display"]
+
+    A["ESP32-CAM<br/>Image Capture"]
+    B["Wi-Fi / HTTP"]
+    C["AI Server<br/>Flask"]
+    D["Face Detection"]
+    E["Custom CNN"]
+    F["Content Logic"]
+    G["3.5-inch TFT<br/>Smart Display"]
+
+    A -->|JPEG| B
+    B --> C
+    C --> D --> E
+    E -->|Class + Confidence| F
+    F --> G
 ```
 
-A possible hardware implementation is:
+The AI server currently works with local image requests and webcam inference.  
+The ESP32-CAM + TFT section represents the target embedded architecture.
 
-```text
-Camera / Vision Module
-        │
-        ▼
-AI Inference
-        │
-        ▼
-Embedded Controller
-        │
-        ▼
-Content Selection
-        │
-        ▼
-LCD / Display
+---
+
+## AI Pipeline
+
+```mermaid
+flowchart LR
+
+    A["Camera Frame"]
+    B["Face Detection"]
+    C["Face Crop"]
+    D["96 × 96"]
+    E["Normalization"]
+    F["CNN"]
+    G["Class + Confidence"]
+
+    A --> B --> C --> D --> E --> F --> G
+```
+
+The model was built from scratch with TensorFlow/Keras and trained on two visual categories used by the prototype.
+
+### Model Overview
+
+| Parameter | Value |
+|---|---|
+| Input | 96 × 96 × 3 |
+| Framework | TensorFlow / Keras |
+| Architecture | Custom CNN |
+| Epochs | 100 |
+| Batch size | 64 |
+| Optimizer | Adam |
+| Face Detection | cvlib + OpenCV |
+
+---
+
+## Training Results
+
+<p align="center">
+  <img src="model/training_plot.png" width="750">
+</p>
+
+The model reaches high training and validation accuracy, while the validation-loss curve shows occasional confidence spikes that deserve deeper evaluation.
+
+---
+
+## Inference Modes
+
+### Local Webcam
+
+```mermaid
+flowchart LR
+
+    A["PC Webcam"]
+    B["Face Detection"]
+    C["CNN"]
+    D["Live Classification"]
+
+    A --> B --> C --> D
+```
+
+Implemented in:
+
+[`model/webcam_inference.py`](model/webcam_inference.py)
+
+---
+
+### HTTP AI Server
+
+```mermaid
+flowchart LR
+
+    A["JPEG Image"]
+    B["Flask Server"]
+    C["Face Detection"]
+    D["CNN"]
+    E["JSON Response"]
+
+    A -->|POST /predict| B
+    B --> C --> D --> E
+```
+
+Implemented in:
+
+[`model/server_inference.py`](model/server_inference.py)
+
+Example response:
+
+```json
+{
+  "label": "woman",
+  "confidence": 0.9632,
+  "confidence_percent": 96.32
+}
 ```
 
 ---
 
-## Project Goals
+## Hardware Concept
 
-- Build a real-time visual classification pipeline.
-- Run inference locally when possible.
-- Connect AI decisions to an embedded hardware output.
-- Display different content according to the classifier output.
-- Keep the architecture modular so the classifier can later be replaced by another audience-aware or context-aware model.
-- Document accuracy, failure cases, privacy constraints, and hardware behavior.
+The proposed embedded side uses:
+
+| Component | Role |
+|---|---|
+| ESP32-CAM | Image acquisition + Wi-Fi |
+| 3.5-inch ILI9486 TFT | Dynamic content display |
+| AI Server | Face detection + CNN inference |
+
+More details:
+
+[Hardware Architecture →](hardware/)
 
 ---
 
 ## Repository Structure
 
 ```text
-EdgeVision-Ads/
-│
-├── README.md
-├── .gitignore
-├── requirements.txt
+EdgeVision/
 │
 ├── model/
-│   ├── README.md
 │   ├── train.py
-│   ├── infer.py
-│   └── config.example.json
-│
-├── embedded/
-│   ├── README.md
-│   └── firmware/
-│       └── README.md
+│   ├── webcam_inference.py
+│   ├── server_inference.py
+│   ├── training_plot.png
+│   └── README.md
 │
 ├── hardware/
 │   ├── README.md
 │   ├── system_architecture.md
 │   └── bom.csv
 │
-├── demo/
-│   ├── README.md
-│   └── content_map.example.json
-│
 ├── docs/
-│   ├── model_card.md
-│   ├── privacy_and_limitations.md
-│   └── validation_plan.md
-│
+├── demo/
 ├── data/
-│   └── README.md
+├── assets/
 │
-└── assets/
-    ├── README.md
-    ├── architecture/
-    ├── demo/
-    └── hardware/
+├── requirements.txt
+├── .gitignore
+└── README.md
 ```
-
----
-
-## AI Pipeline
-
-```text
-Frame Capture
-    ↓
-Face / Region Detection
-    ↓
-Resize + Normalize
-    ↓
-Classifier
-    ↓
-Predicted Class + Confidence
-    ↓
-Decision Threshold
-    ↓
-Content ID
-```
-
-The exact preprocessing steps, model architecture, labels, and confidence threshold should match the implementation used in `model/`.
-
----
-
-## Embedded Flow
-
-```text
-AI Result
-   ↓
-Content ID
-   ↓
-MCU / Embedded Controller
-   ↓
-Display Driver
-   ↓
-Selected Advertisement / Content
-```
-
-The communication interface between the inference side and the embedded controller can be implemented using UART, USB CDC, SPI, Wi-Fi, or another interface depending on the final hardware.
 
 ---
 
 ## Current Status
 
-Update this table as the project evolves.
-
-| Stage | Status |
+| Feature | Status |
 |---|---|
-| Dataset preparation | ⬜ |
-| Model training | ⬜ |
-| Offline inference | ⬜ |
-| Camera integration | ⬜ |
-| Embedded communication | ⬜ |
-| Display integration | ⬜ |
-| End-to-end demo | ⬜ |
-| Accuracy evaluation | ⬜ |
-| Privacy review | ⬜ |
+| CNN Training | ✅ |
+| Local Webcam Inference | ✅ |
+| HTTP AI Server | ✅ |
+| Face Detection | ✅ |
+| Image → JSON Pipeline | ✅ |
+| ESP32-CAM Integration | Planned |
+| TFT Integration | Planned |
+| Complete Embedded Demo | Planned |
 
 ---
 
-## Demo
+## Why EdgeVision?
 
-Place screenshots, GIFs, and short demo media inside:
+The goal is not only to classify an image.
 
-```text
-assets/demo/
+```mermaid
+flowchart LR
+    A["SEE"]
+    B["UNDERSTAND"]
+    C["DECIDE"]
+    D["ACT"]
+
+    A --> B --> C --> D
 ```
 
-Recommended final demo sequence:
-
-```text
-Camera sees subject
-        ↓
-Model produces class + confidence
-        ↓
-System selects content
-        ↓
-Display changes
-```
+EdgeVision explores how computer vision can become part of a complete embedded system where AI results influence real-world hardware behavior.
 
 ---
 
-## Hardware
+## Limitations
 
-Hardware documentation lives in [`hardware/`](hardware/).
+The classifier operates only on the visual categories represented in its training dataset.
 
-Recommended items to document:
+It should not be interpreted as determining a person's actual gender identity.
 
-- camera / vision module,
-- embedded controller,
-- display,
-- power supply,
-- communication interface,
-- wiring or custom PCB,
-- final physical setup.
+Predictions may also be affected by lighting, pose, image quality, occlusion and dataset bias.
 
 ---
 
-## Model
+## Tech Stack
 
-Model documentation and scripts live in [`model/`](model/).
-
-The repository should eventually include:
-
-- training script,
-- inference script,
-- preprocessing definition,
-- model format,
-- class labels,
-- evaluation metrics,
-- representative failure cases.
-
-Avoid committing large datasets or large trained-model files directly to Git unless necessary.
-
----
-
-## Privacy & Limitations
-
-This project should be treated as an engineering prototype.
-
-The classifier can make incorrect predictions and should not be presented as determining a person's actual gender or identity. The README and demo should clearly describe the model's training labels and limitations.
-
-When possible:
-
-- process images locally,
-- avoid storing camera frames,
-- avoid identity recognition,
-- avoid using the output for consequential decisions,
-- document uncertainty and confidence thresholds.
-
-See [`docs/privacy_and_limitations.md`](docs/privacy_and_limitations.md).
-
----
-
-## Tools
-
-Fill this section with the tools actually used.
-
-| Area | Tool |
-|---|---|
-| AI Framework | TODO |
-| Computer Vision | TODO |
-| MCU / Embedded Platform | TODO |
-| Firmware IDE | TODO |
-| Display | TODO |
-| Version Control | Git + GitHub |
-
----
-
-## Future Improvements
-
-- Replace the initial classifier with a more robust context-aware model.
-- Add occupancy / people counting.
-- Add time-of-day or environment-aware content selection.
-- Optimize inference for edge hardware.
-- Add confidence-based fallback content.
-- Add a local dashboard for system statistics without storing raw images.
+`Python` · `TensorFlow` · `Keras` · `OpenCV` · `cvlib` · `Flask` · `ESP32-CAM`
 
 ---
 
