@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/hero/banner_.png" width="100%">
+  <img src="assets/hero/edgevision_banner.png" width="100%">
 </p>
 
 <p align="center">
@@ -10,7 +10,6 @@
   From camera pixels to physical content decisions.
 </p>
 
-# EdgeVision
 
 ### Embedded AI Smart Display
 
