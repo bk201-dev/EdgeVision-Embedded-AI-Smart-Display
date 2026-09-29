@@ -1,7 +1,5 @@
-Category,Part,Reference,Qty,Notes
-Camera,TODO,TODO,1,Image acquisition
-Inference device,TODO,TODO,1,Runs AI model
-MCU,TODO,TODO,1,Embedded control
-Display,TODO,TODO,1,Content output
-Power supply,TODO,TODO,1,System power
-Communication,TODO,TODO,1,AI-to-MCU link
+Category,Component,Quantity,Function
+Processing / Camera,ESP32-CAM,1,Image acquisition Wi-Fi communication and embedded control
+Display,3.5-inch TFT,1,Dynamic visual content display
+Power,5V Power Supply,1,System power
+Interconnect,Jumper wires / connectors,As required,Hardware connections
