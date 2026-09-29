@@ -100,5 +100,20 @@ flowchart LR
 
     A --> B --> C --> D
 ```
+## Display
+
+The user interface is built around a **3.5-inch 480 × 320 TFT display** based on the **ILI9486 controller**.
+
+| Property | Value |
+|---|---|
+| Display size | 3.5 inch |
+| Resolution | 480 × 320 |
+| Controller | ILI9486 |
+| Interface | 16-bit parallel |
+| Supply | 3.3 – 5.5 V |
+| Touch | Yes |
+| microSD | Integrated |
+
+The display is responsible for presenting the content selected by the embedded application after receiving the AI classification result.
 
 EdgeVision connects computer vision to a physical output rather than stopping at an AI prediction.
