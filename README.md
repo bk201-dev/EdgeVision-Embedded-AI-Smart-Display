@@ -145,49 +145,7 @@ More details:
 
 ---
 
-## Repository Structure
 
-```text
-EdgeVision/
-│
-├── model/
-│   ├── train.py
-│   ├── webcam_inference.py
-│   ├── server_inference.py
-│   ├── training_plot.png
-│   └── README.md
-│
-├── hardware/
-│   ├── README.md
-│   ├── system_architecture.md
-│   └── bom.csv
-│
-├── docs/
-├── demo/
-├── data/
-├── assets/
-│
-├── requirements.txt
-├── .gitignore
-└── README.md
-```
-
----
-
-## Current Status
-
-| Feature | Status |
-|---|---|
-| CNN Training | ✅ |
-| Local Webcam Inference | ✅ |
-| HTTP AI Server | ✅ |
-| Face Detection | ✅ |
-| Image → JSON Pipeline | ✅ |
-| ESP32-CAM Integration | Planned |
-| TFT Integration | Planned |
-| Complete Embedded Demo | Planned |
-
----
 
 ## Why EdgeVision?
 
