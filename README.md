@@ -1,3 +1,15 @@
+<p align="center">
+  <img src="assets/hero/banner_.png" width="100%">
+</p>
+
+<p align="center">
+  <b>Computer Vision • Embedded Systems • Edge AI • Smart Display</b>
+</p>
+
+<p align="center">
+  From camera pixels to physical content decisions.
+</p>
+
 # EdgeVision
 
 ### Embedded AI Smart Display
