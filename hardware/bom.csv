@@ -1,5 +1,5 @@
 Category,Component,Quantity,Function
-Processing / Camera,ESP32-CAM,1,Image acquisition Wi-Fi communication and embedded control
-Display,3.5-inch TFT,1,Dynamic visual content display
-Power,5V Power Supply,1,System power
-Interconnect,Jumper wires / connectors,As required,Hardware connections
+Camera / Controller,ESP32-CAM,1,Image capture Wi-Fi communication and embedded control
+Display,3.5-inch TFT ILI9486 480x320,1,Dynamic advertisement and interface display
+Power,5V regulated supply,1,System power
+Interconnect,Jumper wires / headers,As required,Hardware connections
